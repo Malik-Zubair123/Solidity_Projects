@@ -1,0 +1,58 @@
+// SPDX-License-Identifier: GPL-3.0
+
+pragma solidity >=0.8.0 <0.9.0;
+
+contract Lottery {
+    // This is an array of addresses that stores the volunteers who have
+    // entered the lottery.
+    address payable[] public Volunteer;
+
+    // This is the address of the manager of the lottery.
+    address public Manager;
+
+    // This constructor sets the Manager to the address that sent the
+    // transaction that created the contract.
+    constructor() {
+        Manager = msg.sender;
+    }
+
+    // This function is called when someone enters the lottery.
+    // It requires the sender to send 2 ether.
+    receive() external payable {
+        require(msg.value == 2 ether);
+        Volunteer.push(payable(msg.sender));
+    }
+
+    // This function returns the balance of the contract.
+    // It can only be called by the Manager.
+    function getBalance() public view returns(uint) {
+        require(msg.sender==Manager);
+        return address(this).balance;
+    }
+
+    // This function generates a random number.
+    // It gets the number of the previous block,
+    // the current block timestamp,
+    // and the length of the Volunteer array.
+    // It then uses keccak256 to hash these values
+    // and returns the result as a uint.
+    function random() public view returns (uint) {
+        uint blockNumber = block.number - 1; // Get the number of the previous block
+        bytes32 hash = blockhash(blockNumber);
+        return uint(keccak256(abi.encodePacked(hash, block.timestamp, Volunteer.length)));
+    }
+
+    // This function selects a winner from the list of volunteers.
+    // It requires the sender to be the Manager.
+    // It requires there to be at least 3 volunteers in the list.
+    function Selectwinner() public {
+        require(msg.sender==Manager);
+        require(Volunteer.length>=3);
+        address payable winner;
+        uint r = random();
+        uint index = r % Volunteer.length;
+        winner=Volunteer[index]; 
+        winner.transfer(getBalance());
+        Volunteer=new address payable[](0);
+    }
+}
