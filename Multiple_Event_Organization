@@ -1,0 +1,73 @@
+// SPDX-License-Identifier: GPL-3.0
+pragma solidity >=0.6.0 <0.9.0;
+
+contract EventContract {
+
+    // This struct defines the event data.
+    struct Event {
+        address organizer; // The address of the organizer of the event.
+        string name; // The name of the event.
+        uint date; // The date of the event.
+        uint price; // The price of a ticket.
+        uint TicketCount; // The total number of tickets available.
+        uint TicketRemain; // The number of tickets remaining.
+    }
+
+    // This mapping stores the events.
+    mapping(uint => Event) public events;
+
+    // This mapping stores the tickets for each user.
+    mapping(address => mapping(uint => uint)) public tickets;
+
+    // This is the next event ID.
+    uint public nextId;
+
+    // This function creates a new event.
+    function createEvent(string memory name, uint date, uint price, uint TicketCount) public {
+        // The date must be in the future.
+        require(date > block.timestamp, "You can only organize event for future.");
+        // The number of tickets must be greater than 0.
+        require(TicketCount > 0, "Your Tickets should b greater than 0.");
+
+        // Create a new event and store it in the mapping.
+        events[nextId] = Event(msg.sender, name, date, price, TicketCount, TicketCount);
+        // Increment the next event ID.
+        nextId++;
+    }
+
+    // This function buys tickets for an event.
+    function buyTicket(uint id, uint quantity) public payable {
+        // The event must exist.
+        require(events[id].date != 0, "Events doesn't exist");
+        // The event must not have happened yet.
+        require(events[id].date > block.timestamp, "Event already done.");
+
+        // Get the event from the mapping.
+        Event storage _event = events[id];
+
+        // The amount of ether sent must be equal to the price of the tickets.
+        require(msg.value == (_event.price * quantity), "Ether is not enough.");
+        // There must be enough tickets available.
+        require(_event.TicketRemain >= quantity, "Not Enough Tickets.");
+
+        // Reduce the number of remaining tickets.
+        _event.TicketRemain -= quantity;
+        // Increase the number of tickets for the buyer.
+        tickets[msg.sender][id] += quantity;
+    }
+
+    // This function gifts tickets to another user.
+    function GiftTicket(uint id, uint quantity, address to) public {
+        // The event must exist.
+        require(events[id].date != 0, "Events doesn't exist");
+        // The event must not have happened yet.
+        require(events[id].date > block.timestamp, "Event already done.");
+        // The sender must have enough tickets.
+        require(tickets[msg.sender][id] >= quantity, "You are short of Tickets");
+
+        // Reduce the number of tickets for the sender.
+        tickets[msg.sender][id] -= quantity;
+        // Increase the number of tickets for the recipient.
+        tickets[to][id] += quantity;
+    }
+}
